@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Weather App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+      transition: background-color 0.5s;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 250px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #weather {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    #weather img {
+      width: 100px;
+    }
+    .toggle {
+      margin-top: 10px;
+      cursor: pointer;
+      color: #007BFF;
+      text-decoration: underline;
+    }
+    .toggle:hover {
+      color: #0056b3;
+    }
+    .unsplash-image {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Interactive Weather App</h1>
+  <input type="text" id="city" placeholder="Enter city name">
+  <button onclick="getWeather()">Get Weather</button>
+  <p class="toggle" onclick="toggleUnits()">Switch to Fahrenheit</p>
+  <div id="weather"></div>
+  <img id="unsplashImage" class="unsplash-image" src="" alt="City Image">
+
+  <script>
+    let units = 'metric';
+    const unsplashAccessKey = 'vvwJWkPbq--14wd2moNzSmaGB9kaf9q_Z7xdAk5YZ5A';
+
+    // Load last searched city from localStorage
+    window.onload = () => {
+      const lastCity = localStorage.getItem('lastCity');
+      if (lastCity) {
+        document.getElementById('city').value = lastCity;
+        getWeather();
+      }
+    };
+
+    async function getWeather() {
+      const city = document.getElementById('city').value.trim();
+      const apiKey = 'bb8d4d1f24701e30993a09f47cf56132';
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=${units}`;
+
+      if (!city) {
+        document.getElementById('weather').innerHTML = '<p>Please enter a city name.</p>';
+        return;
+      }
+
+      // Save city to localStorage
+      localStorage.setItem('lastCity', city);
+
+      try {
+        document.getElementById('weather').innerHTML = '<p>Loading...</p>';
+
+        const response = await fetch(weatherUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.cod === 200) {
+          const weather = `
+            <h2>Weather in ${data.name}</h2>
+            <p><img src="http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png" alt="${data.weather[0].description}"></p>
+            <p>Temperature: ${data.main.temp}°${units === 'metric' ? 'C' : 'F'}</p>
+            <p>Weather: ${data.weather[0].description}</p>
+            <p>Humidity: ${data.main.humidity}%</p>
+            <p>Wind Speed: ${data.wind.speed} ${units === 'metric' ? 'm/s' : 'mph'}</p>
+          `;
+          document.getElementById('weather').innerHTML = weather;
+          updateBackground(data.weather[0].main);
+          fetchUnsplashImage(city);
+        } else {
+          document.getElementById('weather').innerHTML = `<p>${data.message}</p>`;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('weather').innerHTML = '<p>Failed to fetch weather data. Please try again later.</p>';
+      }
+    }
+
+    async function fetchUnsplashImage(city) {
+      const unsplashUrl = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(city)}&client_id=${unsplashAccessKey}`;
+
+      try {
+        const response = await fetch(unsplashUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.results.length > 0) {
+          const imageUrl = data.results[0].urls.regular;
+          document.getElementById('unsplashImage').src = imageUrl;
+        } else {
+          document.getElementById('unsplashImage').src = '';
+        }
+      } catch (error) {
+        console.error('Error fetching Unsplash image:', error);
+      }
+    }
+
+    function toggleUnits() {
+      units = units === 'metric' ? 'imperial' : 'metric';
+      document.querySelector('.toggle').textContent = `Switch to ${units === 'metric' ? 'Fahrenheit' : 'Celsius'}`;
+      getWeather();
+    }
+
+    function updateBackground(condition) {
+      let bgColor;
+      switch (condition.toLowerCase()) {
+        case 'clear':
+          bgColor = '#87CEEB'; // Light Blue
+          break;
+        case 'clouds':
+          bgColor = '#B0C4DE'; // Light Steel Blue
+          break;
+        case 'rain':
+        case 'drizzle':
+          bgColor = '#708090'; // Slate Gray
+          break;
+        case 'thunderstorm':
+          bgColor = '#2F4F4F'; // Dark Slate Gray
+          break;
+        case 'snow':
+          bgColor = '#FFFafa'; // Snow White
+          break;
+        default:
+          bgColor = '#F5F5F5'; // Default Light Gray
+      }
+      document.body.style.backgroundColor = bgColor;
+    }
+  </script>
+</body>
+</html>
